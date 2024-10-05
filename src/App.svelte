@@ -1,51 +1,57 @@
 <script>
-  import { onMount } from 'svelte';
-  import { writable } from 'svelte/store';
+  import RecipeEditor from "./lib/RecipeEditor.svelte";
+  import { onMount } from "svelte";
+  import { writable } from "svelte/store";
 
   let shoppingList = writable([]);
-  let newItem = '';
+  let newItem = "";
 
   onMount(async () => {
     try {
-      const response = await fetch('/shopping-list.json');
+      const response = await fetch("/shopping-list.json");
       const data = await response.json();
       shoppingList.set(data);
     } catch (error) {
-      console.error('Error loading shopping list:', error);
+      console.error("Error loading shopping list:", error);
     }
   });
 
   function addItem() {
     if (newItem.trim()) {
-      shoppingList.update(items => [...items, newItem.trim()]);
-      newItem = '';
+      shoppingList.update((items) => [...items, newItem.trim()]);
+      newItem = "";
       saveList();
     }
   }
 
   function removeItem(index) {
-    shoppingList.update(items => items.filter((_, i) => i !== index));
+    shoppingList.update((items) => items.filter((_, i) => i !== index));
     saveList();
   }
 
   async function saveList() {
     try {
-      await fetch('/save-shopping-list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify($shoppingList)
+      await fetch("/save-shopping-list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify($shoppingList),
       });
     } catch (error) {
-      console.error('Error saving shopping list:', error);
+      console.error("Error saving shopping list:", error);
     }
+  }
+
+  function handleAddToShoppingList(event) {
+    shoppingList.update((items) => [...items, ...event.detail.detail]);
+    saveList();
   }
 </script>
 
 <main>
   <h1>Shopping List</h1>
-  
+
   <form on:submit|preventDefault={addItem}>
-    <input bind:value={newItem} placeholder="Add new item">
+    <input bind:value={newItem} placeholder="Add new item" />
     <button type="submit">Add</button>
   </form>
 
@@ -57,6 +63,8 @@
       </li>
     {/each}
   </ul>
+
+  <RecipeEditor on:addToShoppingList={handleAddToShoppingList} />
 </main>
 
 <style>

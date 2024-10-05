@@ -26,6 +26,16 @@ app.post('/save-shopping-list', async (req, res) => {
   }
 });
 
+app.post('/save-recipes', async (req, res) => {
+  try {
+    await fs.writeFile('public/recipes.json', JSON.stringify(req.body));
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Error saving recipes:', error);
+    res.sendStatus(500);
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
