@@ -1,14 +1,18 @@
-<script>
+<script lang="ts">
   import { onMount } from "svelte";
   import { writable } from "svelte/store";
   import { createEventDispatcher } from "svelte";
 
   const dispatch = createEventDispatcher();
 
-  let recipes = writable([]);
-  let selectedRecipe = null;
-  let newIngredient = "";
-  let newRecipe = "";
+  type Recipe = {
+    name: String;
+    ingredients: String[];
+  };
+  let recipes = writable<Recipe[]>([]);
+  let selectedRecipe: Recipe | null = null;
+  let newIngredient: String = "";
+  let newRecipe: String = "";
 
   onMount(async () => {
     try {
@@ -19,24 +23,26 @@
     }
   });
 
-  function addToShoppingList(recipe) {
+  function addToShoppingList(recipe: Recipe) {
     dispatch("addToShoppingList", {
       detail: recipe.ingredients,
     });
   }
 
-  function selectRecipe(recipe) {
+  function selectRecipe(recipe: Recipe) {
     selectedRecipe = recipe;
   }
 
-  function removeIngredient(index) {
-    selectedRecipe.ingredients.splice(index, 1);
-    selectedRecipe = selectedRecipe;
-    saveRecipes();
+  function removeIngredient(index: number) {
+    if (selectedRecipe) {
+      selectedRecipe.ingredients.splice(index, 1);
+      selectedRecipe = selectedRecipe;
+      saveRecipes();
+    }
   }
 
   function addIngredient() {
-    if (newIngredient.trim()) {
+    if (newIngredient.trim() && selectedRecipe) {
       selectedRecipe.ingredients.push(newIngredient.trim());
       selectedRecipe = selectedRecipe;
       newIngredient = "";
@@ -55,7 +61,7 @@
     saveRecipes();
   }
 
-  function removeRecipe(index) {
+  function removeRecipe(index: Number) {
     recipes.update((currentRecipes) =>
       currentRecipes.filter((_, i) => i !== index),
     );
@@ -86,7 +92,7 @@
         >
           {recipe.name}
           <button on:click={() => removeRecipe(index)}>Remove</button>
-          <button on:click={addToShoppingList(recipe)}>Add</button>
+          <button on:click={() => addToShoppingList(recipe)}>Add</button>
         </li>
       {/each}
     </ul>
