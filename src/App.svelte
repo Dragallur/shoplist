@@ -1,10 +1,10 @@
-<script>
+<script lang="ts">
   import RecipeEditor from "./lib/RecipeEditor.svelte";
   import { onMount } from "svelte";
   import { writable } from "svelte/store";
 
-  let shoppingList = writable([]);
-  let newItem = "";
+  let shoppingList = writable<String[]>([]);
+  let newItem: String = "";
 
   onMount(async () => {
     try {
@@ -17,14 +17,14 @@
   });
 
   function addItem() {
-    if (newItem.trim()) {
+    if (newItem.trim() !== "") {
       shoppingList.update((items) => [...items, newItem.trim()]);
       newItem = "";
       saveList();
     }
   }
 
-  function removeItem(index) {
+  function removeItem(index: Number) {
     shoppingList.update((items) => items.filter((_, i) => i !== index));
     saveList();
   }
@@ -41,7 +41,7 @@
     }
   }
 
-  function handleAddToShoppingList(event) {
+  function handleAddToShoppingList(event: CustomEvent<{ detail: String[] }>) {
     shoppingList.update((items) => [...items, ...event.detail.detail]);
     saveList();
   }
