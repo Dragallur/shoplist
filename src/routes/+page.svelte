@@ -1,59 +1,97 @@
-<script>
-	import Counter from './Counter.svelte';
-	import welcome from '$lib/images/svelte-welcome.webp';
-	import welcome_fallback from '$lib/images/svelte-welcome.png';
+<script lang="ts">
+  import RecipeEditor from "$lib/components/RecipeEditor.svelte";
+  import { writable } from "svelte/store";
+  import { recipeList } from "$lib/stores";
+
+  let shoppingList = writable<String[]>([]);
+  let newItem: String = "";
+  type Recipe = {
+    name: String;
+    ingredients: String[];
+  };
+  let recipes = writable<Recipe[]>([]);
+
+  /** @type {{ data: import('./$types').PageData }} */
+  export let data;
+  shoppingList.set(data.fileContent["shopping-list.json"]);
+  recipes.set(data.fileContent["recipe-list.json"]);
+  console.log("Shopping list loaded:", $shoppingList);
+  console.log("Recipes loaded:", $recipes);
+
+  function addItem() {
+    if (newItem.trim() !== "") {
+      shoppingList.update((items) => [...items, newItem.trim()]);
+      newItem = "";
+      saveList("shopping-list.json", $shoppingList);
+    }
+  }
+
+  function removeItem(index: Number) {
+    shoppingList.update((items) => items.filter((_, i) => i !== index));
+    saveList("shopping-list.json", $shoppingList);
+  }
+
+  function handleAddToShoppingList(event: CustomEvent<{ detail: String[] }>) {
+    shoppingList.update((items) => [...items, ...event.detail.detail]);
+    saveList("shopping-list.json", $shoppingList);
+  }
+
+  async function saveList(filename: string, content: String[]) {
+    try {
+      const response = await fetch("/api/files", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filename, content }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save changes");
+      }
+
+      const result = await response.json();
+      console.log("Changes saved successfully:", result);
+    } catch (error) {
+      console.error("Error saving changes:", error);
+    }
+  }
 </script>
 
-<svelte:head>
-	<title>Home</title>
-	<meta name="description" content="Svelte demo app" />
-</svelte:head>
+<main>
+  <h1>Shopping List</h1>
 
-<section>
-	<h1>
-		<span class="welcome">
-			<picture>
-				<source srcset={welcome} type="image/webp" />
-				<img src={welcome_fallback} alt="Welcome" />
-			</picture>
-		</span>
+  <form on:submit|preventDefault={addItem}>
+    <input bind:value={newItem} placeholder="Add new item" />
+    <button type="submit">Add</button>
+  </form>
 
-		to your new<br />SvelteKit app
-	</h1>
+  <ul>
+    {#each $shoppingList as item, index}
+      <li>
+        {item}
+        <button on:click={() => removeItem(index)}>Remove</button>
+      </li>
+    {/each}
+  </ul>
 
-	<h2>
-		try editing <strong>src/routes/+page.svelte</strong>
-	</h2>
-
-	<Counter />
-</section>
+  <RecipeEditor on:addToShoppingList={handleAddToShoppingList} />
+</main>
 
 <style>
-	section {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		flex: 0.6;
-	}
-
-	h1 {
-		width: 100%;
-	}
-
-	.welcome {
-		display: block;
-		position: relative;
-		width: 100%;
-		height: 0;
-		padding: 0 0 calc(100% * 495 / 2048) 0;
-	}
-
-	.welcome img {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		top: 0;
-		display: block;
-	}
+  main {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  li {
+    margin-bottom: 10px;
+  }
+  input {
+    margin-right: 10px;
+  }
 </style>

@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { writable } from "svelte/store";
   import { createEventDispatcher } from "svelte";
+  import { recipeList } from "$lib/stores";
 
   const dispatch = createEventDispatcher();
 
@@ -14,14 +15,26 @@
   let newIngredient: String = "";
   let newRecipe: String = "";
 
-  onMount(async () => {
+  async function saveRecipes(filename: string, content: Recipe[]) {
     try {
-      const response = await fetch("/recipes.json");
-      recipes.set(await response.json());
+      const response = await fetch("/api/files", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filename, content }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save changes");
+      }
+
+      const result = await response.json();
+      console.log("Changes saved successfully:", result);
     } catch (error) {
-      console.error("Error loading recipes:", error);
+      console.error("Error saving changes:", error);
     }
-  });
+  }
 
   function addToShoppingList(recipe: Recipe) {
     dispatch("addToShoppingList", {
@@ -37,7 +50,7 @@
     if (selectedRecipe) {
       selectedRecipe.ingredients.splice(index, 1);
       selectedRecipe = selectedRecipe;
-      saveRecipes();
+      saveRecipes("recipe-list.json", $recipes);
     }
   }
 
@@ -47,7 +60,7 @@
       selectedRecipe = selectedRecipe;
       newIngredient = "";
     }
-    saveRecipes();
+    saveRecipes("recipe-list.json", $recipes);
   }
 
   function addNewRecipe() {
@@ -58,26 +71,14 @@
       ]);
       newRecipe = "";
     }
-    saveRecipes();
+    saveRecipes("recipe-list.json", $recipes);
   }
 
   function removeRecipe(index: Number) {
     recipes.update((currentRecipes) =>
       currentRecipes.filter((_, i) => i !== index),
     );
-    saveRecipes();
-  }
-
-  async function saveRecipes() {
-    try {
-      await fetch("/save-recipes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify($recipes),
-      });
-    } catch (error) {
-      console.error("Error saving recipe list:", error);
-    }
+    saveRecipes("recipe-list.json", $recipes);
   }
 </script>
 
