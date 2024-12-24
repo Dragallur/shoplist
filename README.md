@@ -1,3 +1,15 @@
+# Development plan
+
+Checklist
+
+- [ ] Drag and drop everywhere
+- [ ] Move data to database
+- [ ] Add users
+- [ ] Add folders for ingredients and recipes
+- [ ] Add undo/redo
+- [ ] Work on the UI
+- [ ] Phone app?
+
 # sv
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).

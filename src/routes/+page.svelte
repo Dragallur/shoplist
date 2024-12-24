@@ -1,80 +1,72 @@
 <script lang="ts">
   import RecipeEditor from "$lib/components/RecipeEditor.svelte";
-  import { writable } from "svelte/store";
+  import { saveToFile, largestKey } from "$lib/utils";
   import { recipeList } from "$lib/stores";
+  import { shoppingList } from "$lib/stores";
+  import { dndzone } from "svelte-dnd-action";
+  import type { DndEvent } from "svelte-dnd-action";
+  import type { Ingredient } from "$lib/types";
 
-  let shoppingList = writable<String[]>([]);
   let newItem: String = "";
-  type Recipe = {
-    name: String;
-    ingredients: String[];
-  };
-  let recipes = writable<Recipe[]>([]);
 
   /** @type {{ data: import('./$types').PageData }} */
   export let data;
   shoppingList.set(data.fileContent["shopping-list.json"]);
-  recipes.set(data.fileContent["recipe-list.json"]);
-  console.log("Shopping list loaded:", $shoppingList);
-  console.log("Recipes loaded:", $recipes);
+  recipeList.set(data.fileContent["recipe-list.json"]);
 
-  function addItem() {
+  function addItem(newItem: String) {
     if (newItem.trim() !== "") {
-      shoppingList.update((items) => [...items, newItem.trim()]);
+      const keys = $shoppingList.map((item) => item.id);
+      const unique_id = (largestKey(keys) + 1).toString();
+      shoppingList.update((items) => [
+        ...items,
+        { id: unique_id, name: newItem.trim() },
+      ]);
       newItem = "";
-      saveList("shopping-list.json", $shoppingList);
+      saveToFile("shopping-list.json", $shoppingList);
     }
   }
 
-  function removeItem(index: Number) {
+  function handleAddToShoppingList(event: CustomEvent<Ingredient[]>) {
+    shoppingList.update((items) => [...items, ...event.detail]);
+    saveToFile("shopping-list.json", $shoppingList);
+  }
+
+  function handleDndConsider(event: CustomEvent<DndEvent<Ingredient>>) {
+    shoppingList.update(() => event.detail.items);
+  }
+
+  function handleDndFinalize(event: CustomEvent<DndEvent<Ingredient>>) {
+    shoppingList.update(() => event.detail.items);
+    saveToFile("shopping-list.json", $shoppingList);
+  }
+
+  function removeItem(index: number) {
     shoppingList.update((items) => items.filter((_, i) => i !== index));
-    saveList("shopping-list.json", $shoppingList);
-  }
-
-  function handleAddToShoppingList(event: CustomEvent<{ detail: String[] }>) {
-    shoppingList.update((items) => [...items, ...event.detail.detail]);
-    saveList("shopping-list.json", $shoppingList);
-  }
-
-  async function saveList(filename: string, content: String[]) {
-    try {
-      const response = await fetch("/api/files", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ filename, content }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save changes");
-      }
-
-      const result = await response.json();
-      console.log("Changes saved successfully:", result);
-    } catch (error) {
-      console.error("Error saving changes:", error);
-    }
+    saveToFile("shopping-list.json", $shoppingList);
   }
 </script>
 
 <main>
   <h1>Shopping List</h1>
 
-  <form on:submit|preventDefault={addItem}>
+  <form on:submit|preventDefault={() => addItem(newItem)}>
     <input bind:value={newItem} placeholder="Add new item" />
     <button type="submit">Add</button>
   </form>
 
-  <ul>
-    {#each $shoppingList as item, index}
-      <li>
-        {item}
+  <section
+    use:dndzone={{ items: $shoppingList }}
+    on:consider={handleDndConsider}
+    on:finalize={handleDndFinalize}
+  >
+    {#each $shoppingList as item, index (item.id)}
+      <div class="item">
+        {item.name}
         <button on:click={() => removeItem(index)}>Remove</button>
-      </li>
+      </div>
     {/each}
-  </ul>
-
+  </section>
   <RecipeEditor on:addToShoppingList={handleAddToShoppingList} />
 </main>
 
@@ -84,14 +76,21 @@
     margin: 0 auto;
     padding: 20px;
   }
-  ul {
-    list-style-type: none;
-    padding: 0;
-  }
-  li {
-    margin-bottom: 10px;
-  }
   input {
     margin-right: 10px;
+  }
+  .item {
+    padding: 0.5em;
+    margin: 0.5em 0;
+    border: 1px solid #ccc;
+    background: white;
+    cursor: move;
+    transition: transform 0.2s;
+  }
+  .item:hover {
+    transform: scale(1.01);
+  }
+  .item:active {
+    transform: scale(0.99);
   }
 </style>

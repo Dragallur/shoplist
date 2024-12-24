@@ -1,7 +1,5 @@
 import { writable } from 'svelte/store';
+import type { Recipe, Ingredient } from "$lib/types"
 
-export type Recipe = {
-    name: String;
-    ingredients: String[];
-};
-export const recipeList = writable<Recipe[]>([]);
+export let shoppingList = writable<Ingredient[]>([]);
+export let recipeList = writable<Recipe[]>([]);

@@ -1,45 +1,28 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { writable } from "svelte/store";
   import { createEventDispatcher } from "svelte";
-  import { recipeList } from "$lib/stores";
+  import { shoppingList, recipeList } from "$lib/stores";
+  import { saveToFile, largestKey } from "$lib/utils";
+  import { dndzone } from "svelte-dnd-action";
+  import type { DndEvent } from "svelte-dnd-action";
+  import type { Recipe } from "$lib/types";
 
-  const dispatch = createEventDispatcher();
-
-  type Recipe = {
-    name: String;
-    ingredients: String[];
-  };
-  let recipes = writable<Recipe[]>([]);
   let selectedRecipe: Recipe | null = null;
   let newIngredient: String = "";
   let newRecipe: String = "";
 
-  async function saveRecipes(filename: string, content: Recipe[]) {
-    try {
-      const response = await fetch("/api/files", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ filename, content }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save changes");
-      }
-
-      const result = await response.json();
-      console.log("Changes saved successfully:", result);
-    } catch (error) {
-      console.error("Error saving changes:", error);
-    }
-  }
-
   function addToShoppingList(recipe: Recipe) {
-    dispatch("addToShoppingList", {
-      detail: recipe.ingredients,
-    });
+    const keys = $shoppingList.map((item) => item.id);
+    const unique_id = (largestKey(keys) + 1).toString();
+    for (let i = 0; i < recipe.ingredients.length; i++) {
+      shoppingList.update((items) => [
+        ...items,
+        {
+          id: (parseInt(unique_id) + i).toString(),
+          name: recipe.ingredients[i].name,
+        },
+      ]);
+    }
+    saveToFile("shopping-list.json", $shoppingList);
   }
 
   function selectRecipe(recipe: Recipe) {
@@ -50,53 +33,93 @@
     if (selectedRecipe) {
       selectedRecipe.ingredients.splice(index, 1);
       selectedRecipe = selectedRecipe;
-      saveRecipes("recipe-list.json", $recipes);
+      saveToFile("recipe-list.json", $recipeList);
     }
   }
 
   function addIngredient() {
     if (newIngredient.trim() && selectedRecipe) {
-      selectedRecipe.ingredients.push(newIngredient.trim());
+      const keys = selectedRecipe.ingredients.map((item) => item.id);
+      const unique_id = (largestKey(keys) + 1).toString();
+      selectedRecipe.ingredients.push({
+        id: unique_id,
+        name: newIngredient.trim(),
+      });
       selectedRecipe = selectedRecipe;
       newIngredient = "";
+      console.log($recipeList);
     }
-    saveRecipes("recipe-list.json", $recipes);
+    saveToFile("recipe-list.json", $recipeList);
   }
 
   function addNewRecipe() {
     if (newRecipe.trim() !== "") {
-      recipes.update((currentRecipes) => [
+      const keys = $recipeList.map((recipe) => recipe.id);
+      const unique_id = (largestKey(keys) + 1).toString();
+      recipeList.update((currentRecipes) => [
         ...currentRecipes,
-        { name: newRecipe.trim(), ingredients: [] },
+        { id: unique_id, name: newRecipe.trim(), ingredients: [] },
       ]);
       newRecipe = "";
     }
-    saveRecipes("recipe-list.json", $recipes);
+    saveToFile("recipe-list.json", $recipeList);
   }
 
   function removeRecipe(index: Number) {
-    recipes.update((currentRecipes) =>
+    recipeList.update((currentRecipes) =>
       currentRecipes.filter((_, i) => i !== index),
     );
-    saveRecipes("recipe-list.json", $recipes);
+    saveToFile("recipe-list.json", $recipeList);
   }
+
+  function handleDndConsider(e: CustomEvent<DndEvent<Recipe>>) {
+    recipeList.update(() => e.detail.items);
+  }
+
+  function handleDndFinalize(e: CustomEvent<DndEvent<Recipe>>) {
+    recipeList.update(() => e.detail.items);
+    saveToFile("recipe-list.json", $recipeList);
+  }
+  console.log($recipeList);
 </script>
 
 <div class="recipe-editor">
   <div class="recipe-list">
     <h2>Recipes</h2>
-    <ul>
-      {#each $recipes as recipe, index}
-        <li
-          on:click={() => selectRecipe(recipe)}
-          class:selected={selectedRecipe === recipe}
-        >
-          {recipe.name}
-          <button on:click={() => removeRecipe(index)}>Remove</button>
-          <button on:click={() => addToShoppingList(recipe)}>Add</button>
+    <section
+      use:dndzone={{ items: $recipeList }}
+      on:consider={handleDndConsider}
+      on:finalize={handleDndFinalize}
+    >
+      {#each $recipeList as recipe, index (recipe.id)}
+        <li class="recipe-item-container">
+          <span class="drag-handle">⋮⋮</span>
+          <button class="recipe-button" on:click={() => selectRecipe(recipe)}>
+            {recipe.name}
+          </button>
+          <div class="action-buttons">
+            <button
+              class="action-button add-button"
+              on:click={() => addToShoppingList(recipe)}
+            >
+              Add
+            </button>
+            <button
+              class="action-button edit-button"
+              on:click={() => selectRecipe(recipe)}
+            >
+              Edit
+            </button>
+            <button
+              class="action-button delete-button"
+              on:click={() => removeRecipe(index)}
+            >
+              Delete
+            </button>
+          </div>
         </li>
       {/each}
-    </ul>
+    </section>
     <div class="new-recipe">
       <input bind:value={newRecipe} placeholder="New recipe name" />
       <button on:click={addNewRecipe}>Add New Recipe</button>
@@ -109,7 +132,7 @@
       <ul>
         {#each selectedRecipe.ingredients as ingredient, index}
           <li>
-            {ingredient}
+            {ingredient.name}
             <button on:click={() => removeIngredient(index)}>Remove</button>
           </li>
         {/each}
@@ -126,10 +149,6 @@
   .recipe-editor {
     display: flex;
     gap: 2rem;
-  }
-
-  .recipe-list {
-    flex: 1;
   }
 
   .recipe-details {
@@ -157,5 +176,92 @@
 
   input {
     margin-right: 0.5rem;
+  }
+
+  .recipe-item {
+    padding: 0.5em;
+    margin: 0.5em 0;
+    border: 1px solid #ccc;
+    background: white;
+    cursor: move;
+  }
+
+  section {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .recipe-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .recipe-item-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .recipe-item-container:hover {
+    background-color: #f7fafc;
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .recipe-button {
+    flex-grow: 1;
+    text-align: left;
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #2d3748;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .action-button {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .add-button {
+    background-color: #38a169;
+    color: white;
+  }
+  .edit-button {
+    background-color: #4299e1;
+    color: white;
+  }
+
+  .delete-button {
+    background-color: #f56565;
+    color: white;
+  }
+
+  .action-button:hover {
+    opacity: 0.9;
+  }
+
+  /* Add this class for drag handle visual */
+  .drag-handle {
+    cursor: move;
+    color: #a0aec0;
+    padding: 0.25rem;
   }
 </style>
