@@ -1,7 +1,7 @@
 <script lang="ts">
   import RecipeEditor from "$lib/components/RecipeEditor.svelte";
   import { saveToFile, largestKey } from "$lib/utils";
-  import { recipeList } from "$lib/stores";
+  import { recipeList, highestId } from "$lib/stores";
   import { shoppingList } from "$lib/stores";
   import { dndzone } from "svelte-dnd-action";
   import type { DndEvent } from "svelte-dnd-action";
@@ -16,11 +16,10 @@
 
   function addItem(newItem: String) {
     if (newItem.trim() !== "") {
-      const keys = $shoppingList.map((item) => item.id);
-      const unique_id = (largestKey(keys) + 1).toString();
+      $highestId += 1;
       shoppingList.update((items) => [
         ...items,
-        { id: unique_id, name: newItem.trim() },
+        { id: $highestId.toString(), name: newItem.trim() },
       ]);
       newItem = "";
       saveToFile("shopping-list.json", $shoppingList);
@@ -56,7 +55,7 @@
   </form>
 
   <section
-    use:dndzone={{ items: $shoppingList }}
+    use:dndzone={{ items: $shoppingList, type: "ingredients" }}
     on:consider={handleDndConsider}
     on:finalize={handleDndFinalize}
   >

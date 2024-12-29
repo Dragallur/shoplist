@@ -1,23 +1,26 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import { shoppingList, recipeList } from "$lib/stores";
+  import { shoppingList, recipeList, highestId } from "$lib/stores";
   import { saveToFile, largestKey } from "$lib/utils";
-  import { dndzone } from "svelte-dnd-action";
+  import {
+    dndzone,
+    TRIGGERS,
+    SHADOW_ITEM_MARKER_PROPERTY_NAME,
+  } from "svelte-dnd-action";
   import type { DndEvent } from "svelte-dnd-action";
-  import type { Recipe } from "$lib/types";
+  import type { Ingredient, Recipe } from "$lib/types";
 
   let selectedRecipe: Recipe | null = null;
   let newIngredient: String = "";
   let newRecipe: String = "";
 
   function addToShoppingList(recipe: Recipe) {
-    const keys = $shoppingList.map((item) => item.id);
-    const unique_id = (largestKey(keys) + 1).toString();
     for (let i = 0; i < recipe.ingredients.length; i++) {
+      $highestId += 1;
       shoppingList.update((items) => [
         ...items,
         {
-          id: (parseInt(unique_id) + i).toString(),
+          id: $highestId.toString(),
           name: recipe.ingredients[i].name,
         },
       ]);
@@ -39,10 +42,9 @@
 
   function addIngredient() {
     if (newIngredient.trim() && selectedRecipe) {
-      const keys = selectedRecipe.ingredients.map((item) => item.id);
-      const unique_id = (largestKey(keys) + 1).toString();
+      $highestId += 1;
       selectedRecipe.ingredients.push({
-        id: unique_id,
+        id: $highestId.toString(),
         name: newIngredient.trim(),
       });
       selectedRecipe = selectedRecipe;
@@ -54,8 +56,7 @@
 
   function addNewRecipe() {
     if (newRecipe.trim() !== "") {
-      const keys = $recipeList.map((recipe) => recipe.id);
-      const unique_id = (largestKey(keys) + 1).toString();
+      $highestId += 1;
       recipeList.update((currentRecipes) => [
         ...currentRecipes,
         { id: unique_id, name: newRecipe.trim(), ingredients: [] },
@@ -80,14 +81,49 @@
     recipeList.update(() => e.detail.items);
     saveToFile("recipe-list.json", $recipeList);
   }
-  console.log($recipeList);
+
+  //  function handleIngredientDndConsider(e: CustomEvent<DndEvent<Ingredient>>) {
+  //    if (selectedRecipe) {
+  //      selectedRecipe.ingredients = e.detail.items;
+  //      selectedRecipe = selectedRecipe;
+  //    }
+  //  }
+
+  //  function handleIngredientDndFinalize(e: CustomEvent<DndEvent<Ingredient>>) {
+  //    if (selectedRecipe) {
+  //      selectedRecipe.ingredients = e.detail.items;
+  //      selectedRecipe = selectedRecipe;
+  //      saveToFile("recipe-list.json", $recipeList);
+  //    }
+  //  }
+
+  function handleIngredientDndConsider(e) {
+    const { trigger, id } = e.detail.info;
+    console.log("CONSIDER", trigger, id);
+    if (trigger === TRIGGERS.DRAGGED_ENTERED_ANOTHER) {
+      const idx = selectedRecipe.ingredients.findIndex(
+        (item) => item.id === id,
+      );
+      $highestId += 1;
+      e.detail.items.splice(idx, 0, {
+        ...selectedRecipe.ingredients[idx],
+        id: $highestId.toString(),
+      });
+    }
+    selectedRecipe.ingredients = e.detail.items;
+  }
+  function handleIngredientDndFinalize(e) {
+    const { trigger, id } = e.detail.info;
+    console.log("FINALIZE", trigger, id);
+    selectedRecipe.ingredients = e.detail.items;
+  }
 </script>
 
 <div class="recipe-editor">
   <div class="recipe-list">
     <h2>Recipes</h2>
     <section
-      use:dndzone={{ items: $recipeList }}
+      use:dndzone={{ items: $recipeList, type: "recipes" }}
       on:consider={handleDndConsider}
       on:finalize={handleDndFinalize}
     >
@@ -129,16 +165,36 @@
   {#if selectedRecipe}
     <div class="recipe-details">
       <h2>{selectedRecipe.name}</h2>
-      <ul>
-        {#each selectedRecipe.ingredients as ingredient, index}
-          <li>
-            {ingredient.name}
-            <button on:click={() => removeIngredient(index)}>Remove</button>
+      <section
+        use:dndzone={{
+          items: selectedRecipe.ingredients,
+          type: "ingredients",
+        }}
+        on:consider={handleIngredientDndConsider}
+        on:finalize={handleIngredientDndFinalize}
+      >
+        {#each selectedRecipe.ingredients as ingredient, index (ingredient.id)}
+          <li class="recipe-item-container">
+            <span class="drag-handle">⋮⋮</span>
+            <span class="ingredient-name">{ingredient.name}</span>
+            <div class="action-buttons">
+              <button
+                class="action-button delete-button"
+                on:click={() => removeIngredient(index)}
+              >
+                Delete
+              </button>
+            </div>
           </li>
         {/each}
-      </ul>
+      </section>
+
       <div class="add-ingredient">
-        <input bind:value={newIngredient} placeholder="New ingredient" />
+        <input
+          bind:value={newIngredient}
+          placeholder="New ingredient"
+          on:keydown={(e) => e.key === "Enter" && addIngredient()}
+        />
         <button on:click={addIngredient}>Add</button>
       </div>
     </div>
@@ -165,10 +221,6 @@
     padding: 0.5rem;
   }
 
-  .selected {
-    background-color: #e0e0e0;
-  }
-
   .new-recipe,
   .add-ingredient {
     margin-top: 1rem;
@@ -176,14 +228,6 @@
 
   input {
     margin-right: 0.5rem;
-  }
-
-  .recipe-item {
-    padding: 0.5em;
-    margin: 0.5em 0;
-    border: 1px solid #ccc;
-    background: white;
-    cursor: move;
   }
 
   section {
@@ -258,7 +302,6 @@
     opacity: 0.9;
   }
 
-  /* Add this class for drag handle visual */
   .drag-handle {
     cursor: move;
     color: #a0aec0;
