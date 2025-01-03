@@ -15,7 +15,6 @@ export async function POST({ request }) {
             path.join(DATA_DIR, filename),
             JSON.stringify(content)
         );
-        console.log('Data written to file:', filename, content);
         return json({ success: true });
     } catch (error) {
         return json({ error: error.message }, { status: 500 });

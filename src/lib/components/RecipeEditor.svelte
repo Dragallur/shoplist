@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { shoppingList, recipeList, highestId } from "$lib/stores";
+  import { shouldIgnoreDndEvents, currentZone } from "$lib/stores";
   import { saveToFile, largestKey } from "$lib/utils";
   import {
     dndzone,
@@ -16,7 +17,7 @@
 
   function addToShoppingList(recipe: Recipe) {
     for (let i = 0; i < recipe.ingredients.length; i++) {
-      $highestId += 1;
+      highestId.set($highestId + 1);
       shoppingList.update((items) => [
         ...items,
         {
@@ -42,7 +43,7 @@
 
   function addIngredient() {
     if (newIngredient.trim() && selectedRecipe) {
-      $highestId += 1;
+      highestId.set($highestId + 1);
       selectedRecipe.ingredients.push({
         id: $highestId.toString(),
         name: newIngredient.trim(),
@@ -56,10 +57,10 @@
 
   function addNewRecipe() {
     if (newRecipe.trim() !== "") {
-      $highestId += 1;
+      highestId.set($highestId + 1);
       recipeList.update((currentRecipes) => [
         ...currentRecipes,
-        { id: unique_id, name: newRecipe.trim(), ingredients: [] },
+        { id: $highestId.toString(), name: newRecipe.trim(), ingredients: [] },
       ]);
       newRecipe = "";
     }
@@ -97,29 +98,50 @@
   //    }
   //  }
 
-  function handleIngredientDndConsider(e) {
+  function handleIngredientDndConsider(e, text) {
     const { trigger, id } = e.detail.info;
-    console.log("CONSIDER", trigger, id);
-    if (trigger === TRIGGERS.DRAGGED_ENTERED_ANOTHER) {
+    if (trigger === TRIGGERS.DRAG_STARTED) {
       const idx = selectedRecipe.ingredients.findIndex(
         (item) => item.id === id,
       );
-      $highestId += 1;
+      highestId.set($highestId + 1);
+      // the line below was added in order to be compatible with version svelte-dnd-action 0.7.4 and above
+      e.detail.items = e.detail.items.filter(
+        (item) => !item[SHADOW_ITEM_MARKER_PROPERTY_NAME],
+      );
       e.detail.items.splice(idx, 0, {
-        ...selectedRecipe.ingredients[idx],
+        ...selectedRecipe?.ingredients[idx],
         id: $highestId.toString(),
       });
+      selectedRecipe.ingredients = e.detail.items;
+      shouldIgnoreDndEvents.set(true);
+    } else if (!$shouldIgnoreDndEvents) {
+      selectedRecipe.ingredients = e.detail.items;
+    } else {
+      selectedRecipe.ingredients = [...selectedRecipe.ingredients];
     }
-    selectedRecipe.ingredients = e.detail.items;
   }
-  function handleIngredientDndFinalize(e) {
-    const { trigger, id } = e.detail.info;
-    console.log("FINALIZE", trigger, id);
-    selectedRecipe.ingredients = e.detail.items;
+  function handleIngredientDndFinalize(e, text) {
+    console.log("RECIPE EDITOR", text);
+    if (!$shouldIgnoreDndEvents) {
+      selectedRecipe.ingredients = e.detail.items;
+    } else {
+      selectedRecipe.ingredients = [...selectedRecipe.ingredients];
+      shouldIgnoreDndEvents.set(false);
+    }
+  }
+
+  function check() {
+    //console.log("RECIPE LIST", $recipeList);
+    console.log("SHOPPING LIST", $shoppingList);
+    console.log("ID", $highestId);
+    //console.log("SEL RECIPE", selectedRecipe);
+    console.log("SEL RECIPE, INGREDIENTS", selectedRecipe?.ingredients);
   }
 </script>
 
 <div class="recipe-editor">
+  <button on:click={check}>Check</button>
   <div class="recipe-list">
     <h2>Recipes</h2>
     <section
@@ -170,8 +192,8 @@
           items: selectedRecipe.ingredients,
           type: "ingredients",
         }}
-        on:consider={handleIngredientDndConsider}
-        on:finalize={handleIngredientDndFinalize}
+        on:consider={(e) => handleIngredientDndConsider(e, "recipeIngredients")}
+        on:finalize={(e) => handleIngredientDndFinalize(e, "recipeIngredients")}
       >
         {#each selectedRecipe.ingredients as ingredient, index (ingredient.id)}
           <li class="recipe-item-container">
