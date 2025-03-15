@@ -11,8 +11,8 @@
   export let selectedRecipe: Writable<Recipe>;
   export let newIngredient: String;
   export let recipeList;
-  let selIng: Writable<Ingredient[]> = writable([]);
-  let _selIng: Writable<Ingredient[]> = writable([]);
+  export let selIng: Writable<Ingredient[]>;
+  export let _selIng: Writable<Ingredient[]>;
   selIng.set($selectedRecipe.ingredients);
   _selIng.set($selectedRecipe.ingredients);
 
@@ -75,7 +75,7 @@
   function removeIngredient(index: number) {
     if (selectedRecipe) {
       $selIng.splice(index, 1);
-      selectedRecipe = selectedRecipe;
+      $selIng = $selIng;
       $_selIng = $selIng;
       $selectedRecipe.ingredients = $selIng;
       saveToFile("recipe-list.json", $recipeList);
@@ -88,9 +88,9 @@
         id: Date.now().toString(),
         name: newIngredient.trim(),
       });
-      selectedRecipe = selectedRecipe;
       newIngredient = "";
     }
+    $selIng = $selIng;
     $_selIng = $selIng;
     $selectedRecipe.ingredients = $selIng;
     saveToFile("recipe-list.json", $recipeList);

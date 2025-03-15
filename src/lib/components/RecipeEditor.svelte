@@ -3,6 +3,8 @@
     shoppingList,
     _shoppingList,
     selectedRecipe,
+    selIng,
+    _selIng,
     recipeList,
   } from "$lib/stores";
   import { saveToFile } from "$lib/utils";
@@ -30,6 +32,8 @@
 
   function selectRecipe(recipe: Recipe) {
     selectedRecipe.update(() => recipe);
+    selIng.set($selectedRecipe.ingredients);
+    _selIng.set($selectedRecipe.ingredients);
   }
 
   function addNewRecipe() {
@@ -106,6 +110,8 @@
   {#if $selectedRecipe}
     <IngredientList
       {selectedRecipe}
+      {selIng}
+      {_selIng}
       {newIngredient}
       {recipeList}
     />
