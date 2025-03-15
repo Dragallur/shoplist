@@ -2,7 +2,6 @@ import { writable } from 'svelte/store';
 import type { Recipe, Ingredient } from "$lib/types"
 
 export let shoppingList = writable<Ingredient[]>([]);
+export let _shoppingList = writable<Ingredient[]>([]);
+export let selectedRecipe = writable<Recipe | null>(null);
 export let recipeList = writable<Recipe[]>([]);
-export let highestId = writable<number>(0);
-export let shouldIgnoreDndEvents = writable<boolean>(false);
-export let currentZone = writable<string>("");
