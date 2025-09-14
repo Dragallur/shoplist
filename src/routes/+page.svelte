@@ -13,7 +13,7 @@
   shoppingList.set(data.fileContent["shopping-list.json"]);
   recipeList.set(data.fileContent["recipe-list.json"]);
 
-  function addItem(newItem: String) {
+  function addItem() {
     if (newItem.trim() !== "") {
       shoppingList.update((items) => [
         ...items,
@@ -34,7 +34,7 @@
 <main>
   <h1>Shopping List</h1>
 
-  <form on:submit|preventDefault={() => addItem(newItem)}>
+  <form on:submit|preventDefault={addItem}>
     <input bind:value={newItem} placeholder="Add new item" />
     <button type="submit">Add</button>
   </form>

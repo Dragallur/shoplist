@@ -4,7 +4,6 @@
   import type { Ingredient, Recipe } from "$lib/types";
 
   import { createEventDispatcher, tick } from "svelte";
-  import { writable } from "svelte/store";
   import { dndzone, TRIGGERS } from "svelte-dnd-action";
   import { saveToFile } from "$lib/utils";
 

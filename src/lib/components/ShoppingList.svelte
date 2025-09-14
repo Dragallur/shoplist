@@ -3,7 +3,7 @@
   import type { DndEvent } from "svelte-dnd-action";
   import { createEventDispatcher, tick } from "svelte";
   import { saveToFile } from "$lib/utils";
-  import type { Ingredient, Recipe } from "$lib/types";
+  import type { Ingredient } from "$lib/types";
   import type { Writable } from "svelte/store";
 
   export let shoppingList: Writable<Ingredient[]>;
