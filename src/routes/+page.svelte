@@ -13,6 +13,57 @@
   shoppingList.set(data.fileContent["shopping-list.json"]);
   recipeList.set(data.fileContent["recipe-list.json"]);
 
+  export let householdId;
+  export let shopId;
+
+  let recipes = [];
+  let loading = true;
+  let error = null;
+
+  async function fetchRecipes() {
+      try {
+          loading = true;
+          const response = await fetch(`/api/database/recipes?household_id=${householdId}&shop_id=${shopId}`);
+          
+          if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          recipes = await response.json();
+      } catch (err) {
+          console.error('Error fetching recipes:', err);
+          error = err.message;
+      } finally {
+          loading = false;
+      }
+  }
+
+  async function createRecipe() {
+      const recipeData = {
+          name: "test",
+          shop_id: 1,
+          created_by: 1,
+          description: "description",
+      };
+      console.log(JSON.stringify(recipeData)); 
+      try {
+          const response = await fetch('/api/database/recipes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(recipeData)
+          });
+          
+          const result = await response.json();
+          console.log('Recipe created:', result);
+      } catch (error) {
+          console.error('Error:', error);
+      }
+  }
+  console.log("Fetching recipes...");
+  createRecipe();
+  console.log("Recipes fetched:");
+  //console.log(fetchRecipes());
+
   function addItem() {
     if (newItem.trim() !== "") {
       shoppingList.update((items) => [
