@@ -3,6 +3,10 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pool from '$lib/database/connection.js';
 
+import { activeHouseholdId, activeShopId } from '$lib/stores.js';
+import { getHouseholdsByUser } from '$lib/database/queries/household.js';
+import { getShopsByHousehold } from '$lib/database/queries/shop.js';
+
 export async function POST({ request }) {
     try {
         const { username, password } = await request.json();
@@ -47,6 +51,21 @@ export async function POST({ request }) {
             'Set-Cookie',
             `token=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Strict`
         );
+
+        // Set active household and shop to default
+        // Fetch user's households
+        const households = await getHouseholdsByUser(user.id);
+        if (households.length > 0) {
+            const defaultHousehold = households[0];
+            activeHouseholdId.set(defaultHousehold.id);
+
+            // Fetch shops for the default household
+            const shops = await getShopsByHousehold(defaultHousehold.id);
+            if (shops.length > 0) {
+                const defaultShop = shops[0];
+                activeShopId.set(defaultShop.id);
+            } 
+        }
 
         return response;
     } catch (error) {

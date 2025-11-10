@@ -28,37 +28,42 @@ CREATE TABLE IF NOT EXISTS shops (
     name VARCHAR(255) NOT NULL,
     household_id INTEGER REFERENCES households(id) ON DELETE CASCADE,
     description TEXT,
+    created_by INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS items (
     id SERIAL PRIMARY KEY,
-    shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
-    added_by INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    order INTEGER DEFAULT 0,
-    name VARCHAR(255) NOT NULL
+    shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id),
+    name VARCHAR(255) NOT NULL,
+    quantity VARCHAR(255),
+    unit VARCHAR(100),
+    ordering INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS recipes (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
-    created_by INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    order INTEGER DEFAULT 0
+    shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    ordering INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS recipe_items (
     id SERIAL PRIMARY KEY,
-    recipe_id INTEGER REFERENCES recipes(id) ON DELETE CASCADE,
-    unit VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    order INTEGER DEFAULT 0,
+    recipe_id INTEGER REFERENCES recipes(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id),
     name VARCHAR(255) NOT NULL,
+    quantity VARCHAR(255),
+    unit VARCHAR(100),
+    ordering INTEGER DEFAULT 0
 );

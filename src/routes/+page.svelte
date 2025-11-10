@@ -2,16 +2,34 @@
   import RecipeEditor from "$lib/components/RecipeEditor.svelte";
   import { saveToFile } from "$lib/utils";
   import { recipeList } from "$lib/stores";
-  import { shoppingList, _shoppingList } from "$lib/stores";
-  import type { Ingredient } from "$lib/types";
+  import { shoppingList, _shoppingList, activeHouseholdId, activeShopId } from "$lib/stores";
+  import type { Ingredient, Recipe } from "$lib/types";
   import ShoppingList from "$lib/components/ShoppingList.svelte";
+
+  import { getItemsByShop } from "$lib/database/queries/items";
+  import { getRecipesByShop } from "$lib/database/queries/recipe";
 
   let newItem: String = "";
 
-  /** @type {{ data: import('./$types').PageData }} */
-  export let data;
-  shoppingList.set(data.fileContent["shopping-list.json"]);
-  recipeList.set(data.fileContent["recipe-list.json"]);
+ // /** @type {{ data: import('./$types').PageData }} */
+ // export let data;
+ // shoppingList.set(data.fileContent["shopping-list.json"]);
+ // recipeList.set(data.fileContent["recipe-list.json"]);
+  // Load shopping list and recipe list from database
+  let itemsByShop = await getItemsByShop($activeShopId);
+  let recipesByShop = await getRecipesByShop($activeShopId);
+
+  let _items: Ingredient[] = itemsByShop.map((item) => ({
+    id: item.id,
+    name: item.name
+  }));
+  let _recipes: Recipe[] = recipesByShop.map((recipe) => ({
+    id: recipe.id,
+    name: recipe.name,
+  }));
+  shoppingList.set(_items);
+  recipeList.set(_recipes);
+
 
   export let householdId;
   export let shopId;
