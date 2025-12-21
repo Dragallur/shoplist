@@ -6,10 +6,10 @@ export async function getRecipesByShop(shopId) {
     
     try {
         const query = `
-            SELECT id, name, description, shop_id, created_by, created_at, updated_at, order
+            SELECT id, name, description, shop_id, created_by, created_at, updated_at, ordering
             FROM recipes
             WHERE shop_id = $1
-            ORDER BY "order"
+            ORDER BY ordering
         `;
         
         const result = await client.query(query, [shopId]);

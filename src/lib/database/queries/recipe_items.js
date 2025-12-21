@@ -6,7 +6,7 @@ export async function getRecipeItemsByRecipe(recipeId) {
     
     try {
         const query = `
-            SELECT id, recipe_id, unit, created_by, created_at, updated_at, ordering, name
+            SELECT id, recipe_id, unit, created_by, created_at, updated_at, ordering, name, quantity
             FROM recipe_items
             WHERE recipe_id = $1
             ORDER BY ordering

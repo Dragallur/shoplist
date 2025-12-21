@@ -5,37 +5,21 @@
   import { shoppingList, _shoppingList, activeHouseholdId, activeShopId } from "$lib/stores";
   import type { Ingredient, Recipe } from "$lib/types";
   import ShoppingList from "$lib/components/ShoppingList.svelte";
-
-  import { getItemsByShop } from "$lib/database/queries/items";
-  import { getRecipesByShop } from "$lib/database/queries/recipe";
+  import { enhance } from '$app/forms';
 
   let newItem: String = "";
-
- // /** @type {{ data: import('./$types').PageData }} */
- // export let data;
- // shoppingList.set(data.fileContent["shopping-list.json"]);
- // recipeList.set(data.fileContent["recipe-list.json"]);
-  // Load shopping list and recipe list from database
-  let itemsByShop = await getItemsByShop($activeShopId);
-  let recipesByShop = await getRecipesByShop($activeShopId);
-
-  let _items: Ingredient[] = itemsByShop.map((item) => ({
-    id: item.id,
-    name: item.name
-  }));
-  let _recipes: Recipe[] = recipesByShop.map((recipe) => ({
-    id: recipe.id,
-    name: recipe.name,
-  }));
-  shoppingList.set(_items);
-  recipeList.set(_recipes);
-
+  export let data;
+  
+  $: {
+    shoppingList.set(data.items);
+    recipeList.set(data.recipes);
+  }
 
   export let householdId;
   export let shopId;
 
   let recipes = [];
-  let loading = true;
+  let loading = false;
   let error = null;
 
   async function fetchRecipes() {
@@ -56,32 +40,6 @@
       }
   }
 
-  async function createRecipe() {
-      const recipeData = {
-          name: "test",
-          shop_id: 1,
-          created_by: 1,
-          description: "description",
-      };
-      console.log(JSON.stringify(recipeData)); 
-      try {
-          const response = await fetch('/api/database/recipes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(recipeData)
-          });
-          
-          const result = await response.json();
-          console.log('Recipe created:', result);
-      } catch (error) {
-          console.error('Error:', error);
-      }
-  }
-  console.log("Fetching recipes...");
-  createRecipe();
-  console.log("Recipes fetched:");
-  //console.log(fetchRecipes());
-
   function addItem() {
     if (newItem.trim() !== "") {
       shoppingList.update((items) => [
@@ -98,11 +56,38 @@
     shoppingList.update((items) => [...items, ...event.detail]);
     saveToFile("shopping-list.json", $shoppingList);
   }
+
+  // If you need optimistic UI updates
+  function handleSubmit() {
+      loading = true;
+      return async ({ result, update }) => {
+          loading = false;
+          if (result.type === 'success') {
+              newItem = ''; // Clear input
+          }
+          await update(); // This will invalidate and reload data
+      };
+  }
 </script>
+
+
 
 <main>
   <h1>Shopping List</h1>
 
+  <form method="POST" action="?/addItem" use:enhance={handleSubmit}>
+      <input type="hidden" name="shopId" value={shopId} />
+      <input 
+          type="text" 
+          name="name" 
+          bind:value={newItem}
+          placeholder="Add new item..."
+          disabled={loading}
+      />
+      <button type="submit" disabled={loading || !newItem.trim()}>
+          {loading ? 'Adding...' : 'Add'}
+      </button>
+  </form>
   <form on:submit|preventDefault={addItem}>
     <input bind:value={newItem} placeholder="Add new item" />
     <button type="submit">Add</button>

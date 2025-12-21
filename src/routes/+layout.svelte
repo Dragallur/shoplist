@@ -1,9 +1,13 @@
 <script>
   import { onMount } from 'svelte';
-  import "../lib/styles/global.css";
+  import "$lib/styles/global.css";
   import { auth } from '$lib/stores/auth.js';
   import LoginForm from '$lib/components/LoginForm.svelte';
   import AppLayout from '$lib/components/AppLayout.svelte';
+  import { activeShopId } from '$lib/stores';
+  import { page } from '$app/stores';
+
+  $: activeShopId.set($page.params.shopId);
 
   onMount(() => {
     auth.init();

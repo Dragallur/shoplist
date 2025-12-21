@@ -30,6 +30,27 @@
     _shoppingList.set($shoppingList);
   }
 
+  async function createRecipe() {
+      const recipeData = {
+          name: "test",
+          shop_id: 1,
+          created_by: 1,
+          description: "description",
+      };
+      try {
+          const response = await fetch('/api/database/recipes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(recipeData)
+          });
+          
+          const result = await response.json();
+          console.log('Recipe created:', result);
+      } catch (error) {
+          console.error('Error:', error);
+      }
+  }
+
   function selectRecipe(recipe: Recipe) {
     selectedRecipe.update(() => recipe);
     selIng.set($selectedRecipe.ingredients);
