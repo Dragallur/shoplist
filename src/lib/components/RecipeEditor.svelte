@@ -6,9 +6,9 @@
     selIng,
     _selIng,
     recipeList,
+    activeShopId,
   } from "$lib/stores";
-  import { saveToFile } from "$lib/utils";
-  import { dndzone } from "svelte-dnd-action";
+  import { dndzone, TRIGGERS } from "svelte-dnd-action";
   import type { DndEvent } from "svelte-dnd-action";
   import type { Recipe } from "$lib/types";
   import IngredientList from "$lib/components/IngredientList.svelte";
@@ -16,39 +16,23 @@
   let newIngredient: String = "";
   let newRecipe: String = "";
 
-  function addToShoppingList(recipe: Recipe) {
+  async function addToShoppingList(recipe: Recipe) {
     for (let i = 0; i < recipe.ingredients.length; i++) {
       shoppingList.update((items) => [
         ...items,
-        {
-          id: Date.now().toString() + "_" + i.toString(),
-          name: recipe.ingredients[i].name,
-        },
+        { id: Date.now().toString() + "_" + i.toString(), name: recipe.ingredients[i].name },
       ]);
     }
-    saveToFile("shopping-list.json", $shoppingList);
     _shoppingList.set($shoppingList);
-  }
-
-  async function createRecipe() {
-      const recipeData = {
-          name: "test",
-          shop_id: 1,
-          created_by: 1,
-          description: "description",
-      };
-      try {
-          const response = await fetch('/api/database/recipes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(recipeData)
-          });
-          
-          const result = await response.json();
-          console.log('Recipe created:', result);
-      } catch (error) {
-          console.error('Error:', error);
-      }
+    const shopId = parseInt($activeShopId as string);
+    const res = await fetch('/api/items', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shopId, items: $shoppingList })
+    });
+    const newItems = await res.json();
+    shoppingList.update(() => newItems);
+    _shoppingList.update(() => newItems);
   }
 
   function selectRecipe(recipe: Recipe) {
@@ -57,22 +41,33 @@
     _selIng.set($selectedRecipe.ingredients);
   }
 
-  function addNewRecipe() {
-    if (newRecipe.trim() !== "") {
-      recipeList.update((currentRecipes) => [
-        ...currentRecipes,
-        { id: Date.now().toString(), name: newRecipe.trim(), ingredients: [] },
-      ]);
-      newRecipe = "";
+  async function addNewRecipe() {
+    if (!newRecipe.trim()) return;
+    const shopId = parseInt($activeShopId as string);
+    const response = await fetch('/api/recipes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newRecipe.trim(), shopId })
+    });
+    if (!response.ok) {
+      console.error('Error creating recipe');
+      return;
     }
-    saveToFile("recipe-list.json", $recipeList);
+    const recipe = await response.json();
+    recipeList.update((currentRecipes) => [
+      ...currentRecipes,
+      { ...recipe, ingredients: [] }
+    ]);
+    newRecipe = "";
   }
 
-  function removeRecipe(index: Number) {
+  async function removeRecipe(index: Number) {
+    const recipe = $recipeList[index as number];
+    await fetch(`/api/recipes/${recipe.id}`, { method: 'DELETE' })
+      .catch(err => console.error('Error deleting recipe:', err));
     recipeList.update((currentRecipes) =>
       currentRecipes.filter((_, i) => i !== index),
     );
-    saveToFile("recipe-list.json", $recipeList);
   }
 
   function handleDndConsider(e: CustomEvent<DndEvent<Recipe>>) {
@@ -81,7 +76,11 @@
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Recipe>>) {
     recipeList.update(() => e.detail.items);
-    saveToFile("recipe-list.json", $recipeList);
+    fetch('/api/recipes', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipes: $recipeList.map((r, i) => ({ id: r.id, ordering: i })) })
+    }).catch(err => console.error('Error saving recipe order:', err));
   }
 </script>
 
