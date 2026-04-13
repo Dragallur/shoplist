@@ -3,13 +3,15 @@ import { fail } from "@sveltejs/kit";
 import { getItemsByShop, insertItem, getMaxOrdering } from "$lib/database/queries/items";
 import { getRecipesByShop } from "$lib/database/queries/recipe";
 import { getRecipeItemsByRecipe } from "$lib/database/queries/recipe_items";
+import { getShopById } from "$lib/database/queries/shop";
 
 export async function load({ params }) {
   const shopId = params.shopId;
-  
-  const [itemsByShop, recipesByShop] = await Promise.all([
+
+  const [itemsByShop, recipesByShop, shop] = await Promise.all([
     getItemsByShop(shopId),
-    getRecipesByShop(shopId)
+    getRecipesByShop(shopId),
+    getShopById(shopId)
   ]);
 
   const recipes = await Promise.all(
@@ -35,7 +37,8 @@ export async function load({ params }) {
   return {
     items,
     recipes,
-    shopId
+    shopId: parseInt(shopId),
+    householdId: shop?.household_id ?? null
   };
 };
 
