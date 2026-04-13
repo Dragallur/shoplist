@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import { auth } from '$lib/stores/auth.js';
   import { nav } from '$lib/stores/navigation.js';
   import { page } from '$app/stores';
@@ -18,15 +19,48 @@
   let newHouseholdName = '';
   let householdError = '';
 
+  // Invite member
+  let showInvite = false;
+  let inviteUsername = '';
+  let inviteMessage = '';
+  let inviteIsError = false;
+
   // Shop dropdown
   let shopOpen = false;
   let showNewShop = false;
   let newShopName = '';
   let shopError = '';
 
+  // Pending invites
+  let pendingInvites = [];
+  let invitesOpen = false;
+
+  onMount(async () => {
+    if ($auth.isAuthenticated) await loadInvites();
+  });
+
+  async function loadInvites() {
+    const res = await fetch('/api/invites');
+    if (res.ok) pendingInvites = await res.json();
+  }
+
+  async function respondToInvite(id, status) {
+    const res = await fetch(`/api/invites/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (res.ok) {
+      pendingInvites = pendingInvites.filter(i => i.id !== id);
+      if (status === 'accepted') await nav.refreshHouseholds();
+      if (pendingInvites.length === 0) invitesOpen = false;
+    }
+  }
+
   function closeAll() {
     householdOpen = false;
     shopOpen = false;
+    invitesOpen = false;
   }
 
   async function submitNewHousehold() {
@@ -46,6 +80,26 @@
       householdOpen = false;
     } catch {
       householdError = 'Failed to create household.';
+    }
+  }
+
+  async function submitInvite() {
+    if (!inviteUsername.trim()) return;
+    inviteMessage = '';
+    const householdId = $nav.activeHousehold?.id;
+    const res = await fetch(`/api/households/${householdId}/invites`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: inviteUsername.trim() })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      inviteMessage = `Invite sent to ${inviteUsername.trim()}.`;
+      inviteIsError = false;
+      inviteUsername = '';
+    } else {
+      inviteMessage = data.error || 'Failed to send invite.';
+      inviteIsError = true;
     }
   }
 
@@ -88,7 +142,7 @@
       <button
         class="dropdown-btn"
         class:open={householdOpen}
-        on:click={() => { householdOpen = !householdOpen; shopOpen = false; }}
+        on:click={() => { householdOpen = !householdOpen; shopOpen = false; invitesOpen = false; }}
       >
         {$nav.activeHousehold?.name ?? 'Select household'}
         <span class="chevron">▾</span>
@@ -110,6 +164,35 @@
 
           <li class="separator"></li>
 
+          <!-- Invite member -->
+          {#if $nav.activeHousehold}
+            {#if showInvite}
+              <li class="new-item-form">
+                <input
+                  bind:value={inviteUsername}
+                  placeholder="Username"
+                  on:keydown={e => e.key === 'Enter' && submitInvite()}
+                  autofocus
+                />
+                <button on:click={submitInvite}>Send</button>
+                <button class="cancel" on:click={() => { showInvite = false; inviteUsername = ''; inviteMessage = ''; }}>✕</button>
+              </li>
+              {#if inviteMessage}
+                <li class="feedback" class:error={inviteIsError} class:success={!inviteIsError}>
+                  {inviteMessage}
+                </li>
+              {/if}
+            {:else}
+              <li>
+                <button class="dropdown-item new-btn" on:click={() => showInvite = true}>
+                  + Invite member
+                </button>
+              </li>
+            {/if}
+            <li class="separator"></li>
+          {/if}
+
+          <!-- New household -->
           {#if showNewHousehold}
             <li class="new-item-form">
               <input
@@ -139,7 +222,7 @@
         <button
           class="dropdown-btn"
           class:open={shopOpen}
-          on:click={() => { shopOpen = !shopOpen; householdOpen = false; }}
+          on:click={() => { shopOpen = !shopOpen; householdOpen = false; invitesOpen = false; }}
         >
           {$nav.activeShop?.name ?? 'Select shop'}
           <span class="chevron">▾</span>
@@ -180,6 +263,36 @@
                 </button>
               </li>
             {/if}
+          </ul>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Pending invites -->
+    {#if pendingInvites.length > 0}
+      <div class="dropdown invites-dropdown">
+        <button
+          class="dropdown-btn invites-btn"
+          class:open={invitesOpen}
+          on:click={() => { invitesOpen = !invitesOpen; householdOpen = false; shopOpen = false; }}
+        >
+          Invites ({pendingInvites.length})
+        </button>
+
+        {#if invitesOpen}
+          <ul class="dropdown-list invites-list">
+            {#each pendingInvites as invite}
+              <li class="invite-item">
+                <div class="invite-info">
+                  <strong>{invite.household_name}</strong>
+                  <span>from {invite.invited_by_username}</span>
+                </div>
+                <div class="invite-actions">
+                  <button class="accept-btn" on:click={() => respondToInvite(invite.id, 'accepted')}>Accept</button>
+                  <button class="reject-btn" on:click={() => respondToInvite(invite.id, 'rejected')}>Reject</button>
+                </div>
+              </li>
+            {/each}
           </ul>
         {/if}
       </div>
@@ -239,6 +352,7 @@
     padding: 0.5rem 2rem;
     display: flex;
     gap: 0.5rem;
+    align-items: center;
   }
 
   /* Dropdowns */
@@ -262,6 +376,17 @@
   .dropdown-btn:hover,
   .dropdown-btn.open {
     background-color: #e8e8e8;
+  }
+
+  .invites-btn {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+  }
+
+  .invites-btn:hover,
+  .invites-btn.open {
+    background-color: #ffe69c;
   }
 
   .chevron {
@@ -345,10 +470,83 @@
     background: #aaa;
   }
 
+  .feedback {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .feedback.error {
+    color: #c00;
+  }
+
+  .feedback.success {
+    color: #4CAF50;
+  }
+
   .error {
     color: #c00;
     font-size: 0.75rem;
     padding: 0 0.5rem;
+  }
+
+  /* Invites dropdown */
+  .invites-dropdown {
+    margin-left: auto;
+  }
+
+  .invites-list {
+    right: 0;
+    left: auto;
+    min-width: 260px;
+  }
+
+  .invite-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .invite-item + .invite-item {
+    border-top: 1px solid #eee;
+  }
+
+  .invite-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.85rem;
+  }
+
+  .invite-info span {
+    color: #888;
+    font-size: 0.78rem;
+  }
+
+  .invite-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .accept-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+
+  .reject-btn {
+    background: #aaa;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
   }
 
   .app-main {

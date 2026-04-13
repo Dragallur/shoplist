@@ -84,6 +84,15 @@ function createNavStore() {
             goto(`/shop/${shop.id}`);
         },
 
+        refreshHouseholds: async () => {
+            try {
+                const households = await fetchHouseholds();
+                update(s => ({ ...s, households }));
+            } catch (error) {
+                console.error('Error refreshing households:', error);
+            }
+        },
+
         reset: () => set(initial)
     };
 }

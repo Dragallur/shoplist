@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS recipes (
     ordering INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS household_invites (
+    id SERIAL PRIMARY KEY,
+    household_id INTEGER REFERENCES households(id) ON DELETE CASCADE,
+    invited_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    invited_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(household_id, invited_user_id)
+);
+
 CREATE TABLE IF NOT EXISTS recipe_items (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
