@@ -84,6 +84,26 @@ function createNavStore() {
             goto(`/shop/${shop.id}`);
         },
 
+        renameHousehold: (householdId, name) => {
+            update(s => ({
+                ...s,
+                households: s.households.map(h => h.id === householdId ? { ...h, name } : h),
+                activeHousehold: s.activeHousehold?.id === householdId
+                    ? { ...s.activeHousehold, name }
+                    : s.activeHousehold
+            }));
+        },
+
+        renameShop: (shopId, name) => {
+            update(s => ({
+                ...s,
+                shops: s.shops.map(sh => sh.id === shopId ? { ...sh, name } : sh),
+                activeShop: s.activeShop?.id === shopId
+                    ? { ...s.activeShop, name }
+                    : s.activeShop
+            }));
+        },
+
         refreshHouseholds: async () => {
             try {
                 const households = await fetchHouseholds();

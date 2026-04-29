@@ -16,6 +16,22 @@ export async function createShop(householdId, name, userId) {
     }
 }
 
+export async function updateShopName(shopId, name) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'UPDATE shops SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name',
+            [name, shopId]
+        );
+        return result.rows[0] || null;
+    } catch (error) {
+        console.error('Error updating shop name:', error);
+        throw new Error('Failed to update shop name');
+    } finally {
+        client.release();
+    }
+}
+
 export async function getShopById(shopId) {
     const client = await pool.connect();
     try {

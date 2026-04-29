@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import pool from '/home/vojtechklimes/Documents/shoplist_project/shoplist/src/lib/database/connection.js';
+import pool from './src/lib/database/connection.js';
 
 async function testConnection() {
     try {

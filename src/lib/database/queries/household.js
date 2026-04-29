@@ -27,6 +27,22 @@ export async function createHousehold(name, userId) {
     }
 }
 
+export async function updateHouseholdName(householdId, name) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'UPDATE households SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name',
+            [name, householdId]
+        );
+        return result.rows[0] || null;
+    } catch (error) {
+        console.error('Error updating household name:', error);
+        throw new Error('Failed to update household name');
+    } finally {
+        client.release();
+    }
+}
+
 export async function isUserInHousehold(userId, householdId) {
     const client = await pool.connect();
     try {

@@ -31,6 +31,59 @@
   let newShopName = '';
   let shopError = '';
 
+  // Inline rename
+  let editingHouseholdId = null;
+  let editHouseholdName = '';
+  let editingShopId = null;
+  let editShopName = '';
+
+  function startEditHousehold(h) {
+    editingHouseholdId = h.id;
+    editHouseholdName = h.name;
+  }
+
+  function cancelEditHousehold() {
+    editingHouseholdId = null;
+    editHouseholdName = '';
+  }
+
+  async function saveHouseholdName(householdId) {
+    if (!editHouseholdName.trim()) return;
+    const res = await fetch(`/api/households/${householdId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editHouseholdName.trim() })
+    });
+    if (res.ok) {
+      nav.renameHousehold(householdId, editHouseholdName.trim());
+      cancelEditHousehold();
+    }
+  }
+
+  function startEditShop(s) {
+    editingShopId = s.id;
+    editShopName = s.name;
+  }
+
+  function cancelEditShop() {
+    editingShopId = null;
+    editShopName = '';
+  }
+
+  async function saveShopName(shop) {
+    if (!editShopName.trim()) return;
+    const householdId = $nav.activeHousehold?.id;
+    const res = await fetch(`/api/households/${householdId}/shops/${shop.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editShopName.trim() })
+    });
+    if (res.ok) {
+      nav.renameShop(shop.id, editShopName.trim());
+      cancelEditShop();
+    }
+  }
+
   // Pending invites
   let pendingInvites = [];
   let invitesOpen = false;
@@ -151,14 +204,32 @@
       {#if householdOpen}
         <ul class="dropdown-list">
           {#each $nav.households as h}
-            <li>
-              <button
-                class="dropdown-item"
-                class:active={h.id === $nav.activeHousehold?.id}
-                on:click={() => { nav.selectHousehold(h); householdOpen = false; }}
-              >
-                {h.name}
-              </button>
+            <li class="item-row">
+              {#if editingHouseholdId === h.id}
+                <div class="inline-edit">
+                  <input
+                    bind:value={editHouseholdName}
+                    on:keydown={e => { if (e.key === 'Enter') saveHouseholdName(h.id); if (e.key === 'Escape') cancelEditHousehold(); }}
+                    autofocus
+                  />
+                  <button class="save-btn" on:click={() => saveHouseholdName(h.id)}>✓</button>
+                  <button class="cancel-btn" on:click={cancelEditHousehold}>✕</button>
+                </div>
+              {:else}
+                <button
+                  class="dropdown-item"
+                  class:active={h.id === $nav.activeHousehold?.id}
+                  on:click={() => { nav.selectHousehold(h); householdOpen = false; }}
+                >
+                  {h.name}
+                </button>
+                <button class="edit-btn" title="Rename" on:click|stopPropagation={() => startEditHousehold(h)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              {/if}
             </li>
           {/each}
 
@@ -231,14 +302,32 @@
         {#if shopOpen}
           <ul class="dropdown-list">
             {#each $nav.shops as s}
-              <li>
-                <button
-                  class="dropdown-item"
-                  class:active={s.id === $nav.activeShop?.id}
-                  on:click={() => { nav.selectShop(s); shopOpen = false; }}
-                >
-                  {s.name}
-                </button>
+              <li class="item-row">
+                {#if editingShopId === s.id}
+                  <div class="inline-edit">
+                    <input
+                      bind:value={editShopName}
+                      on:keydown={e => { if (e.key === 'Enter') saveShopName(s); if (e.key === 'Escape') cancelEditShop(); }}
+                      autofocus
+                    />
+                    <button class="save-btn" on:click={() => saveShopName(s)}>✓</button>
+                    <button class="cancel-btn" on:click={cancelEditShop}>✕</button>
+                  </div>
+                {:else}
+                  <button
+                    class="dropdown-item"
+                    class:active={s.id === $nav.activeShop?.id}
+                    on:click={() => { nav.selectShop(s); shopOpen = false; }}
+                  >
+                    {s.name}
+                  </button>
+                  <button class="edit-btn" title="Rename" on:click|stopPropagation={() => startEditShop(s)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                {/if}
               </li>
             {/each}
 
@@ -432,6 +521,71 @@
 
   .new-btn {
     color: #4CAF50;
+  }
+
+  /* Rename inline edit */
+  .item-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .item-row .dropdown-item {
+    flex: 1;
+  }
+
+  .edit-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0.5rem;
+    color: #bbb;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+
+  .item-row:hover .edit-btn {
+    opacity: 1;
+  }
+
+  .edit-btn:hover {
+    color: #555;
+  }
+
+  .inline-edit {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0.5rem;
+    width: 100%;
+  }
+
+  .inline-edit input {
+    flex: 1;
+    border: 1px solid #4CAF50;
+    border-radius: 3px;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.85rem;
+    outline: none;
+    min-width: 0;
+  }
+
+  .save-btn, .cancel-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.1rem 0.25rem;
+    border-radius: 3px;
+  }
+
+  .save-btn {
+    color: #4CAF50;
+  }
+
+  .cancel-btn {
+    color: #aaa;
   }
 
   .separator {
