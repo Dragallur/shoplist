@@ -5,7 +5,6 @@
 
   import { createEventDispatcher, tick } from "svelte";
   import { dndzone, TRIGGERS } from "svelte-dnd-action";
-  import { saveToFile } from "$lib/utils";
 
   export let selectedRecipe: Writable<Recipe>;
   export let newIngredient: String;
@@ -16,6 +15,18 @@
   _selIng.set($selectedRecipe.ingredients);
 
   const dispatch = createEventDispatcher();
+
+  async function saveToDb(items: Ingredient[]) {
+    const res = await fetch('/api/recipe-items', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipeId: $selectedRecipe.id, items })
+    });
+    const newItems = await res.json();
+    selIng.update(() => newItems);
+    _selIng.update(() => newItems);
+    $selectedRecipe.ingredients = newItems;
+  }
 
   function handleDndConsider(e: CustomEvent<DndEvent<Ingredient>>) {
     const {
@@ -47,10 +58,9 @@
       });
     }
     $selectedRecipe.ingredients = $selIng;
-    saveToFile("recipe-list.json", $recipeList);
   }
 
-  function handleDndFinalize(e: CustomEvent<DndEvent<Ingredient>>) {
+  async function handleDndFinalize(e: CustomEvent<DndEvent<Ingredient>>) {
     const {
       detail: {
         items: newItems,
@@ -68,20 +78,20 @@
     }
     tick().then(() => dispatch("listdrag", {}));
     $selectedRecipe.ingredients = $selIng;
-    saveToFile("recipe-list.json", $recipeList);
+    await saveToDb($selIng);
   }
 
-  function removeIngredient(index: number) {
+  async function removeIngredient(index: number) {
     if (selectedRecipe) {
       $selIng.splice(index, 1);
       $selIng = $selIng;
       $_selIng = $selIng;
       $selectedRecipe.ingredients = $selIng;
-      saveToFile("recipe-list.json", $recipeList);
+      await saveToDb($selIng);
     }
   }
 
-  function addIngredient() {
+  async function addIngredient() {
     if (newIngredient.trim() && selectedRecipe) {
       $selIng.push({
         id: Date.now().toString(),
@@ -92,7 +102,7 @@
     $selIng = $selIng;
     $_selIng = $selIng;
     $selectedRecipe.ingredients = $selIng;
-    saveToFile("recipe-list.json", $recipeList);
+    await saveToDb($selIng);
   }
 </script>
 
@@ -131,4 +141,3 @@
     <button on:click={addIngredient}>Add</button>
   </div>
 </div>
-

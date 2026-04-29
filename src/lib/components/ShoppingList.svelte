@@ -2,13 +2,25 @@
   import { dndzone, TRIGGERS } from "svelte-dnd-action";
   import type { DndEvent } from "svelte-dnd-action";
   import { createEventDispatcher, tick } from "svelte";
-  import { saveToFile } from "$lib/utils";
   import type { Ingredient } from "$lib/types";
   import type { Writable } from "svelte/store";
+  import { activeShopId } from "$lib/stores";
 
   export let shoppingList: Writable<Ingredient[]>;
   export let _shoppingList: Writable<Ingredient[]>;
   const dispatch = createEventDispatcher();
+
+  async function saveToDb(items: Ingredient[]) {
+    const shopId = parseInt($activeShopId as string);
+    const res = await fetch('/api/items', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shopId, items })
+    });
+    const newItems = await res.json();
+    shoppingList.update(() => newItems);
+    _shoppingList.update(() => newItems);
+  }
 
   function handleDndConsider(e: CustomEvent<DndEvent<Ingredient>>) {
     const {
@@ -39,10 +51,9 @@
         return items;
       });
     }
-    saveToFile("shopping-list.json", $shoppingList);
   }
 
-  function handleDndFinalize(e: CustomEvent<DndEvent<Ingredient>>) {
+  async function handleDndFinalize(e: CustomEvent<DndEvent<Ingredient>>) {
     const {
       detail: {
         items: newItems,
@@ -59,14 +70,14 @@
       _shoppingList.update(() => $shoppingList);
     }
     tick().then(() => dispatch("listdrag", {}));
-    saveToFile("shopping-list.json", $shoppingList);
+    await saveToDb($shoppingList);
   }
   _shoppingList.update(() => $shoppingList);
 
-  function removeItem(index: number) {
+  async function removeItem(index: number) {
     $shoppingList = $shoppingList.filter((_, i) => i !== index);
-    saveToFile("shopping-list.json", $shoppingList);
     _shoppingList.set($shoppingList);
+    await saveToDb($shoppingList);
   }
 </script>
 

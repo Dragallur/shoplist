@@ -1,3 +1,7 @@
+body {
+  margin: 0;
+}
+
 .recipe-item-container {
   display: flex;
   align-items: center;
@@ -14,59 +18,60 @@
 .ingredient-name {
   flex-grow: 1;
 }
-  .recipe-item-container:hover {
-    background-color: #f7fafc;
-    transform: translateX(2px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
 
-  .recipe-button {
-    flex-grow: 1;
-    text-align: left;
-    padding: 0.5rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    color: #2d3748;
-  }
+.recipe-item-container:hover {
+  background-color: #f7fafc;
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
-  .action-buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
+.recipe-button {
+  flex-grow: 1;
+  text-align: left;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #2d3748;
+}
 
-  .action-button {
-    padding: 0.5rem;
-    border: none;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-  .add-button {
-    background-color: #38a169;
-    color: white;
-  }
-  .edit-button {
-    background-color: #4299e1;
-    color: white;
-  }
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
 
-  .delete-button {
-    background-color: #f56565;
-    color: white;
-  }
+.action-button {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.add-button {
+  background-color: #38a169;
+  color: white;
+}
+.edit-button {
+  background-color: #4299e1;
+  color: white;
+}
 
-  .action-button:hover {
-    opacity: 0.9;
-  }
+.delete-button {
+  background-color: #f56565;
+  color: white;
+}
 
-  .drag-handle {
-    cursor: move;
-    color: #a0aec0;
-    padding: 0.25rem;
-  }
-  .recipe-editor {
-    display: flex;
-    gap: 2rem;
-  }
+.action-button:hover {
+  opacity: 0.9;
+}
+
+.drag-handle {
+  cursor: move;
+  color: #a0aec0;
+  padding: 0.25rem;
+}
+.recipe-editor {
+  display: flex;
+  gap: 2rem;
+}

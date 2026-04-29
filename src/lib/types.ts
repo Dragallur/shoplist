@@ -1,10 +1,10 @@
 export type Recipe = {
-    id: string
+    id: string | number;
     name: string;
     ingredients: Ingredient[];
 };
 
 export type Ingredient = {
-    id: string;
+    id: string | number;
     name: string;
 }

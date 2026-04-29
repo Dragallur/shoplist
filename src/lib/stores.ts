@@ -7,3 +7,6 @@ export let selectedRecipe = writable<Recipe | null>(null);
 export let recipeList = writable<Recipe[]>([]);
 export let selIng = writable<Ingredient[]>([]);
 export let _selIng = writable<Ingredient[]>([]);
+
+export let activeHouseholdId = writable<number | null>(null);
+export let activeShopId = writable<number | null>(null);

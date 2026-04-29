@@ -1,0 +1,79 @@
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS households (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_households (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    household_id INTEGER REFERENCES households(id) ON DELETE CASCADE,
+    role VARCHAR(255) DEFAULT 'member',
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, household_id)
+);
+
+CREATE TABLE IF NOT EXISTS shops (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    household_id INTEGER REFERENCES households(id) ON DELETE CASCADE,
+    description TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS items (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id),
+    name VARCHAR(255) NOT NULL,
+    quantity VARCHAR(255),
+    unit VARCHAR(100),
+    ordering INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS recipes (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    ordering INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS household_invites (
+    id SERIAL PRIMARY KEY,
+    household_id INTEGER REFERENCES households(id) ON DELETE CASCADE,
+    invited_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    invited_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(household_id, invited_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS recipe_items (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    recipe_id INTEGER REFERENCES recipes(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id),
+    name VARCHAR(255) NOT NULL,
+    quantity VARCHAR(255),
+    unit VARCHAR(100),
+    ordering INTEGER DEFAULT 0
+);
